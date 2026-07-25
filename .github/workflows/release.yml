@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   release:
-    uses: Clyde-He/Specos-Workflows/.github/workflows/macos-notarized-release.yml@v1.0.0
+    uses: Clyde-He/Specos-Workflows/.github/workflows/macos-notarized-release.yml@v1.1.2
     with:
       app_name: "Infinity Hub"
       project_path: "Infinity Hub.xcodeproj"
