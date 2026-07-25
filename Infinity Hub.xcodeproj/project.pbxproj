@@ -25,10 +25,10 @@
 		200000000000000000000007 /* Protocol.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = Protocol.md; sourceTree = "<group>"; };
 		200000000000000000000008 /* Device-Research.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "Device-Research.md"; sourceTree = "<group>"; };
 		200000000000000000000009 /* macOS-Battery-Publishing.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "macOS-Battery-Publishing.md"; sourceTree = "<group>"; };
-		20000000000000000000000A /* Tools README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
-		20000000000000000000000B /* Battery Probe main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		20000000000000000000000C /* HID Inspector main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
-		20000000000000000000000D /* Original Battery Probe main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		20000000000000000000000A /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		20000000000000000000000B /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		20000000000000000000000C /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		20000000000000000000000D /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		20000000000000000000000E /* AMInfinity97BluetoothBatteryReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AMInfinity97BluetoothBatteryReader.swift; sourceTree = "<group>"; };
 		C2EAB864301355CA008A37C9 /* AngryMiao.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AngryMiao.icon; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -89,7 +89,7 @@
 		400000000000000000000005 /* Tools */ = {
 			isa = PBXGroup;
 			children = (
-				20000000000000000000000A /* Tools README.md */,
+				20000000000000000000000A /* README.md */,
 				400000000000000000000006 /* battery-probe */,
 				400000000000000000000007 /* hid-inspector */,
 				400000000000000000000008 /* original-battery-probe */,
@@ -100,7 +100,7 @@
 		400000000000000000000006 /* battery-probe */ = {
 			isa = PBXGroup;
 			children = (
-				20000000000000000000000B /* Battery Probe main.swift */,
+				20000000000000000000000B /* main.swift */,
 			);
 			path = "battery-probe";
 			sourceTree = "<group>";
@@ -108,7 +108,7 @@
 		400000000000000000000007 /* hid-inspector */ = {
 			isa = PBXGroup;
 			children = (
-				20000000000000000000000C /* HID Inspector main.swift */,
+				20000000000000000000000C /* main.swift */,
 			);
 			path = "hid-inspector";
 			sourceTree = "<group>";
@@ -116,7 +116,7 @@
 		400000000000000000000008 /* original-battery-probe */ = {
 			isa = PBXGroup;
 			children = (
-				20000000000000000000000D /* Original Battery Probe main.swift */,
+				20000000000000000000000D /* main.swift */,
 			);
 			path = "original-battery-probe";
 			sourceTree = "<group>";
@@ -331,7 +331,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = design.specos.infinityhub;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -357,7 +357,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = design.specos.infinityhub;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
