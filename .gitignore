@@ -1,15 +1,29 @@
 # macOS
 .DS_Store
 
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# Signing and notarization credentials
+*.cer
+*.p12
+*.mobileprovision
+AuthKey_*.p8
+
 # Xcode user state
-xcuserdata/
+**/xcuserdata/
 *.xcuserstate
 *.xcscmblueprint
 
 # Build products and diagnostics
 DerivedData/
 build/
+*.xcarchive
 *.xcresult
+*.dSYM
+*.dSYM.zip
 
 # SwiftPM
 .build/
