@@ -298,7 +298,7 @@ final class BatteryViewModel: ObservableObject {
                             name:
                                 hasMultipleEndpoints
                                     ? "Mouse"
-                                    : group.model.mouseName,
+                                    : group.model.compactMouseName,
                             reading: group.mouse,
                             connection: group.mouseConnection
                         ),
@@ -320,7 +320,7 @@ final class BatteryViewModel: ObservableObject {
                             name:
                                 hasMultipleEndpoints
                                     ? "Receiver"
-                                    : group.model.receiverName,
+                                    : group.model.compactReceiverName,
                             reading: group.receiver
                         ),
                     ]

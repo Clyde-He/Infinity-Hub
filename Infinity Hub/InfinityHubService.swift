@@ -58,6 +58,19 @@ enum AMBatteryDeviceModel: Int, Hashable {
         "\(mouseName) Receiver"
     }
 
+    var compactMouseName: String {
+        switch self {
+        case .infinity97:
+            return "AM Infinity .97"
+        case .infinity8K:
+            return "AM Infinity"
+        }
+    }
+
+    var compactReceiverName: String {
+        "\(compactMouseName) Receiver"
+    }
+
     fileprivate var powerSourceMouseName: String {
         mouseName
     }
