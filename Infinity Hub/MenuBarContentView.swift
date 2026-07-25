@@ -17,17 +17,13 @@ struct MenuBarContentView: View {
             }
             .padding(.horizontal, 10)
             .padding(.top, 10)
-            .padding(.bottom, 8)
+            .padding(.bottom, hasNotices ? 8 : 10)
 
             if hasNotices {
                 notices
                     .padding(.horizontal, 12)
                     .padding(.bottom, 10)
             }
-
-            footer
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
         }
         .frame(width: 300)
         .onAppear {
@@ -150,61 +146,6 @@ struct MenuBarContentView: View {
         }
         .font(.caption)
         .fixedSize(horizontal: false, vertical: true)
-    }
-
-    // MARK: - Footer
-
-    private var footer: some View {
-        HStack {
-            Menu {
-                Toggle(
-                    "Start at Login",
-                    isOn: Binding(
-                        get: { loginItem.isEnabled },
-                        set: { loginItem.setEnabled($0) }
-                    )
-                )
-
-                Divider()
-
-                Button("Quit Infinity Hub") {
-                    NSApplication.shared.terminate(nil)
-                }
-                .keyboardShortcut("q")
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 24, height: 24)
-                    .background(.quaternary.opacity(0.6), in: Circle())
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
-
-            Spacer()
-
-            Button {
-                battery.refresh()
-            } label: {
-                Group {
-                    if battery.isRefreshing {
-                        ProgressView()
-                            .controlSize(.mini)
-                    } else {
-                        Image(systemName: "arrow.clockwise")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                }
-                .foregroundStyle(.secondary)
-                .frame(width: 24, height: 24)
-                .background(.quaternary.opacity(0.6), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .disabled(battery.isRefreshing)
-            .help("Refresh battery levels")
-        }
     }
 
     // MARK: - Color
