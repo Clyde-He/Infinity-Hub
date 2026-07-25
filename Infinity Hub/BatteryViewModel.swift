@@ -283,52 +283,45 @@ final class BatteryViewModel: ObservableObject {
         for group: AMBatteryDeviceGroup
     ) -> [AccessoryDisplayGroup] {
         let hasMultipleEndpoints = endpointCount(in: group) > 1
-        var groups: [AccessoryDisplayGroup] = []
+        var items: [AccessoryDisplayState] = []
 
         if group.mouseExpected {
-            groups.append(
-                AccessoryDisplayGroup(
-                    id: "\(group.id).mouse.group",
-                    title: nil,
-                    detail: nil,
-                    items: [
-                        displayState(
-                            id: "\(group.id).mouse",
-                            kind: .mouse,
-                            name:
-                                hasMultipleEndpoints
-                                    ? "Mouse"
-                                    : group.model.compactMouseName,
-                            reading: group.mouse,
-                            connection: group.mouseConnection
-                        ),
-                    ]
+            items.append(
+                displayState(
+                    id: "\(group.id).mouse",
+                    kind: .mouse,
+                    name:
+                        hasMultipleEndpoints
+                            ? "Mouse"
+                            : group.model.compactMouseName,
+                    reading: group.mouse,
+                    connection: group.mouseConnection
                 )
             )
         }
 
         if group.receiverExpected {
-            groups.append(
-                AccessoryDisplayGroup(
-                    id: "\(group.id).receiver.group",
-                    title: nil,
-                    detail: nil,
-                    items: [
-                        displayState(
-                            id: "\(group.id).receiver",
-                            kind: .receiver,
-                            name:
-                                hasMultipleEndpoints
-                                    ? "Receiver"
-                                    : group.model.compactReceiverName,
-                            reading: group.receiver
-                        ),
-                    ]
+            items.append(
+                displayState(
+                    id: "\(group.id).receiver",
+                    kind: .receiver,
+                    name:
+                        hasMultipleEndpoints
+                            ? "Receiver"
+                            : group.model.compactReceiverName,
+                    reading: group.receiver
                 )
             )
         }
 
-        return groups
+        return [
+            AccessoryDisplayGroup(
+                id: group.id,
+                title: nil,
+                detail: nil,
+                items: items
+            ),
+        ]
     }
 
     private func endpointCount(in group: AMBatteryDeviceGroup) -> Int {

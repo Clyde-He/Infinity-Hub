@@ -39,9 +39,9 @@ struct MenuBarContentView: View {
     private func deviceGroupCard(
         _ group: AccessoryDisplayGroup
     ) -> some View {
-        if let title = group.title, group.items.count > 1 {
+        if group.items.count > 1 {
             groupedBatteryCard(
-                title: title,
+                title: group.title,
                 detail: group.detail,
                 items: group.items
             )
@@ -60,29 +60,31 @@ struct MenuBarContentView: View {
     }
 
     private func groupedBatteryCard(
-        title: String,
+        title: String?,
         detail: String?,
         items: [AccessoryDisplayState]
     ) -> some View {
         VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-
-                Spacer()
-
-                if let detail {
-                    Text(detail)
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+            if let title {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
                         .lineLimit(1)
+
+                    Spacer()
+
+                    if let detail {
+                        Text(detail)
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                            .lineLimit(1)
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 2)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 10)
-            .padding(.bottom, 2)
 
             ForEach(items) { state in
                 if state.id != items.first?.id {
