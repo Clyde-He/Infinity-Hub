@@ -24,8 +24,8 @@ jobs:
       expected_bundle_id: design.specos.infinityhub
       release_tag: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
       apple_team_id: ${{ vars.APPLE_TEAM_ID }}
-      xcode_path: /Applications/Xcode_26.4.1.app
-      minimum_xcode_major: 26
+      runner: xcode-27
+      minimum_xcode_major: 27
     secrets:
       developer_id_certificate_base64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
       developer_id_certificate_password: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
