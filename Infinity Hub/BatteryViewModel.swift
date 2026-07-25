@@ -49,11 +49,28 @@ struct AccessoryDisplayState: Identifiable {
     )
 }
 
+struct AccessoryDisplayGroup: Identifiable {
+    let id: String
+    let title: String?
+    let detail: String?
+    let items: [AccessoryDisplayState]
+}
+
 @MainActor
 final class BatteryViewModel: ObservableObject {
-    @Published private(set) var accessories = [
-        AccessoryDisplayState.disconnectedMouse,
-        AccessoryDisplayState.disconnectedBase,
+    @Published private(set) var deviceGroups = [
+        AccessoryDisplayGroup(
+            id: "disconnected.mouse.group",
+            title: nil,
+            detail: nil,
+            items: [.disconnectedMouse]
+        ),
+        AccessoryDisplayGroup(
+            id: "disconnected.receiver.group",
+            title: nil,
+            detail: nil,
+            items: [.disconnectedBase]
+        ),
     ]
     @Published private(set) var message: String?
     @Published private(set) var isRefreshing = false
@@ -66,6 +83,10 @@ final class BatteryViewModel: ObservableObject {
     private var scheduledRefresh: DispatchWorkItem?
     private var isPolling = false
     private var isStopped = false
+
+    private var accessories: [AccessoryDisplayState] {
+        deviceGroups.flatMap(\.items)
+    }
 
     var menuBarSymbol: String {
         if let mouse = accessories.first(where: {
@@ -156,12 +177,22 @@ final class BatteryViewModel: ObservableObject {
             return $0.id < $1.id
         }
         if groups.isEmpty {
-            accessories = [
-                .disconnectedMouse,
-                .disconnectedBase,
+            deviceGroups = [
+                AccessoryDisplayGroup(
+                    id: "disconnected.mouse.group",
+                    title: nil,
+                    detail: nil,
+                    items: [.disconnectedMouse]
+                ),
+                AccessoryDisplayGroup(
+                    id: "disconnected.receiver.group",
+                    title: nil,
+                    detail: nil,
+                    items: [.disconnectedBase]
+                ),
             ]
         } else {
-            accessories = displayStates(for: groups)
+            deviceGroups = displayGroups(for: groups)
         }
 
         let missingMouseReading = groups.isEmpty || groups.contains {
@@ -174,38 +205,41 @@ final class BatteryViewModel: ObservableObject {
         )
     }
 
-    private func displayStates(
+    private func displayGroups(
         for groups: [AMBatteryDeviceGroup]
-    ) -> [AccessoryDisplayState] {
-        let isSingleGroup = groups.count == 1
-        let mouseCounts = Dictionary(
-            grouping: groups.filter(\.mouseExpected),
+    ) -> [AccessoryDisplayGroup] {
+        if let onlyGroup = groups.first, groups.count == 1 {
+            return standaloneDisplayGroups(for: onlyGroup)
+        }
+
+        let combinedCounts = Dictionary(
+            grouping: groups.filter {
+                endpointCount(in: $0) > 1
+            },
             by: \.model
         ).mapValues(\.count)
-        let receiverCounts = Dictionary(
-            grouping: groups.filter(\.receiverExpected),
-            by: \.model
-        ).mapValues(\.count)
-        var mouseIndices: [AMBatteryDeviceModel: Int] = [:]
-        var receiverIndices: [AMBatteryDeviceModel: Int] = [:]
-        var states: [AccessoryDisplayState] = []
+        var combinedIndices: [AMBatteryDeviceModel: Int] = [:]
+        var displayGroups: [AccessoryDisplayGroup] = []
 
         for group in groups {
+            let isCombined = endpointCount(in: group) > 1
+            let combinedIndex: Int?
+            if isCombined {
+                let index = (combinedIndices[group.model] ?? 0) + 1
+                combinedIndices[group.model] = index
+                combinedIndex = index
+            } else {
+                combinedIndex = nil
+            }
+            var items: [AccessoryDisplayState] = []
+
             if group.mouseExpected {
-                let index = (mouseIndices[group.model] ?? 0) + 1
-                mouseIndices[group.model] = index
-                let name = isSingleGroup
-                    ? "Mouse"
-                    : displayName(
-                        group.model.mouseName,
-                        count: mouseCounts[group.model] ?? 1,
-                        index: index
-                    )
-                states.append(
+                items.append(
                     displayState(
                         id: "\(group.id).mouse",
                         kind: .mouse,
-                        name: name,
+                        name:
+                            isCombined ? "Mouse" : group.model.mouseName,
                         reading: group.mouse,
                         connection: group.mouseConnection
                     )
@@ -213,35 +247,106 @@ final class BatteryViewModel: ObservableObject {
             }
 
             if group.receiverExpected {
-                let index = (receiverIndices[group.model] ?? 0) + 1
-                receiverIndices[group.model] = index
-                let name = isSingleGroup
-                    ? "Receiver"
-                    : displayName(
-                        group.model.receiverName,
-                        count: receiverCounts[group.model] ?? 1,
-                        index: index
-                    )
-                states.append(
+                items.append(
                     displayState(
                         id: "\(group.id).receiver",
                         kind: .receiver,
-                        name: name,
+                        name:
+                            isCombined
+                                ? "Receiver"
+                                : group.model.receiverName,
                         reading: group.receiver
                     )
                 )
             }
+
+            displayGroups.append(
+                AccessoryDisplayGroup(
+                    id: group.id,
+                    title: isCombined ? group.model.mouseName : nil,
+                    detail: isCombined
+                        ? combinedDetail(
+                            for: group,
+                            count: combinedCounts[group.model] ?? 1,
+                            index: combinedIndex ?? 1
+                        )
+                        : nil,
+                    items: items
+                )
+            )
         }
 
-        return states
+        return displayGroups
     }
 
-    private func displayName(
-        _ name: String,
+    private func standaloneDisplayGroups(
+        for group: AMBatteryDeviceGroup
+    ) -> [AccessoryDisplayGroup] {
+        let hasMultipleEndpoints = endpointCount(in: group) > 1
+        var groups: [AccessoryDisplayGroup] = []
+
+        if group.mouseExpected {
+            groups.append(
+                AccessoryDisplayGroup(
+                    id: "\(group.id).mouse.group",
+                    title: nil,
+                    detail: nil,
+                    items: [
+                        displayState(
+                            id: "\(group.id).mouse",
+                            kind: .mouse,
+                            name:
+                                hasMultipleEndpoints
+                                    ? "Mouse"
+                                    : group.model.mouseName,
+                            reading: group.mouse,
+                            connection: group.mouseConnection
+                        ),
+                    ]
+                )
+            )
+        }
+
+        if group.receiverExpected {
+            groups.append(
+                AccessoryDisplayGroup(
+                    id: "\(group.id).receiver.group",
+                    title: nil,
+                    detail: nil,
+                    items: [
+                        displayState(
+                            id: "\(group.id).receiver",
+                            kind: .receiver,
+                            name:
+                                hasMultipleEndpoints
+                                    ? "Receiver"
+                                    : group.model.receiverName,
+                            reading: group.receiver
+                        ),
+                    ]
+                )
+            )
+        }
+
+        return groups
+    }
+
+    private func endpointCount(in group: AMBatteryDeviceGroup) -> Int {
+        (group.mouseExpected ? 1 : 0)
+            + (group.receiverExpected ? 1 : 0)
+    }
+
+    private func combinedDetail(
+        for group: AMBatteryDeviceGroup,
         count: Int,
         index: Int
     ) -> String {
-        count > 1 ? "\(name) \(index)" : name
+        let connection =
+            group.mouseConnection?.label
+            ?? AMMouseConnection.receiver.label
+        return count > 1
+            ? "\(connection) · \(index)"
+            : connection
     }
 
     private func scheduleNext(after delay: TimeInterval) {

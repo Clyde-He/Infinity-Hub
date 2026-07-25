@@ -14,6 +14,8 @@ the app into a broader native macOS device Hub.
 ## Behavior
 
 - Mouse and base battery cards in a menu-bar panel
+- Adaptive grouping: one device group keeps separate cards, while multiple
+  groups combine each paired Mouse and Receiver into one sectioned card
 - Manual Refresh and Quit controls
 - User-controlled Start at Login toggle using `SMAppService.mainApp`
 - Five-second retry until the first valid Mouse value is available

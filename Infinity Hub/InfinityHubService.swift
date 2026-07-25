@@ -48,28 +48,18 @@ enum AMBatteryDeviceModel: Int, Hashable {
     var mouseName: String {
         switch self {
         case .infinity97:
-            return "Infinity .97"
+            return "AM Infinity Mouse .97"
         case .infinity8K:
-            return "Infinity 8K"
+            return "AM Infinity Mouse"
         }
     }
 
     var receiverName: String {
-        switch self {
-        case .infinity97:
-            return ".97 Receiver"
-        case .infinity8K:
-            return "8K Receiver"
-        }
+        "\(mouseName) Receiver"
     }
 
     fileprivate var powerSourceMouseName: String {
-        switch self {
-        case .infinity97:
-            return "AM Infinity .97"
-        case .infinity8K:
-            return "AM Infinity 8K"
-        }
+        mouseName
     }
 
     fileprivate var powerSourceReceiverName: String {

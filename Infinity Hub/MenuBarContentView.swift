@@ -8,11 +8,8 @@ struct MenuBarContentView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 6) {
-                ForEach(battery.accessories) { state in
-                    batteryCard(
-                        state: state,
-                        symbol: state.kind.symbol
-                    )
+                ForEach(battery.deviceGroups) { group in
+                    deviceGroupCard(group)
                 }
             }
             .padding(.horizontal, 10)
@@ -38,12 +35,74 @@ struct MenuBarContentView: View {
 
     // MARK: - Battery cards
 
+    @ViewBuilder
+    private func deviceGroupCard(
+        _ group: AccessoryDisplayGroup
+    ) -> some View {
+        if let title = group.title, group.items.count > 1 {
+            groupedBatteryCard(
+                title: title,
+                detail: group.detail,
+                items: group.items
+            )
+        } else if let state = group.items.first {
+            batteryCard(state: state)
+        }
+    }
+
     private func batteryCard(
-        state: AccessoryDisplayState,
-        symbol: String
+        state: AccessoryDisplayState
+    ) -> some View {
+        batteryRow(state)
+            .background {
+                cardBackground
+            }
+    }
+
+    private func groupedBatteryCard(
+        title: String,
+        detail: String?,
+        items: [AccessoryDisplayState]
+    ) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(title)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer()
+
+                if let detail {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 10)
+            .padding(.bottom, 2)
+
+            ForEach(items) { state in
+                if state.id != items.first?.id {
+                    Divider()
+                        .padding(.leading, 48)
+                        .padding(.trailing, 16)
+                }
+                batteryRow(state)
+            }
+        }
+        .background {
+            cardBackground
+        }
+    }
+
+    private func batteryRow(
+        _ state: AccessoryDisplayState
     ) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: symbol)
+            Image(systemName: state.kind.symbol)
                 .font(.system(size: 20, weight: .medium))
                 .foregroundStyle(state.isPresent ? Color.primary : Color.secondary)
                 .frame(width: 30, height: 30)
@@ -89,10 +148,11 @@ struct MenuBarContentView: View {
         .padding(.vertical, 12)
         .padding(.leading, 10)
         .padding(.trailing, 16)
-        .background {
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(.quaternary.opacity(0.5))
-        }
+    }
+
+    private var cardBackground: some View {
+        RoundedRectangle(cornerRadius: 8, style: .continuous)
+            .fill(.quaternary.opacity(0.5))
     }
 
     private func levelBar(state: AccessoryDisplayState) -> some View {
