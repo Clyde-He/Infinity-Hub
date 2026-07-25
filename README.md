@@ -13,8 +13,8 @@ the app into a broader native macOS device Hub.
 
 ## Behavior
 
-- Left-click Mouse and Receiver battery cards in a menu-bar popover
-- Right-click native menu for Refresh, Start at Login, and Quit
+- Mouse and base battery cards in a menu-bar panel
+- Manual Refresh and Quit controls
 - User-controlled Start at Login toggle using `SMAppService.mainApp`
 - Five-second retry until the first valid Mouse value is available
 - Sixty-second polling after the first valid Mouse reading
