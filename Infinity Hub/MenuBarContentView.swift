@@ -7,9 +7,13 @@ struct MenuBarContentView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            VStack(spacing: 6) {
-                ForEach(battery.deviceGroups) { group in
-                    deviceGroupCard(group)
+            VStack(spacing: 8) {
+                if battery.deviceGroups.isEmpty {
+                    emptyState
+                } else {
+                    ForEach(battery.deviceGroups) { group in
+                        deviceGroupCard(group)
+                    }
                 }
             }
             .padding(.horizontal, 10)
@@ -35,6 +39,21 @@ struct MenuBarContentView: View {
 
     // MARK: - Battery cards
 
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "computermouse")
+                .font(.system(size: 20, weight: .medium))
+
+            Text("No devices connected")
+                .font(.caption)
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 24)
+        .padding(.bottom, 2)
+        .background(cardBackground.opacity(0))
+    }
+
     @ViewBuilder
     private func deviceGroupCard(
         _ group: AccessoryDisplayGroup
@@ -42,7 +61,6 @@ struct MenuBarContentView: View {
         if group.items.count > 1 {
             groupedBatteryCard(
                 title: group.title,
-                detail: group.detail,
                 items: group.items
             )
         } else if let state = group.items.first {
@@ -61,36 +79,27 @@ struct MenuBarContentView: View {
 
     private func groupedBatteryCard(
         title: String?,
-        detail: String?,
         items: [AccessoryDisplayState]
     ) -> some View {
         VStack(spacing: 0) {
             if let title {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(title)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-
-                    Spacer()
-
-                    if let detail {
-                        Text(detail)
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .lineLimit(1)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 10)
-                .padding(.bottom, 2)
+                Text(title.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, 12)
+                    .padding(.trailing, 16)
+                    .padding(.top, 10)
+//                    .padding(.bottom, 20)
             }
 
             ForEach(items) { state in
                 if state.id != items.first?.id {
                     Divider()
-                        .padding(.leading, 48)
-                        .padding(.trailing, 16)
+//                        .padding(.horizontal, 12)
+                        .padding(.vertical, 2)
+                        .opacity(0.7)
                 }
                 batteryRow(state)
             }
@@ -109,7 +118,7 @@ struct MenuBarContentView: View {
                 .foregroundStyle(state.isPresent ? Color.primary : Color.secondary)
                 .frame(width: 30, height: 30)
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(alignment: .firstTextBaseline) {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(state.name)
@@ -128,7 +137,7 @@ struct MenuBarContentView: View {
                     Spacer()
 
                     if let level = state.level {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 2) {
                             if state.isCharging || state.isCharged {
                                 Image(systemName: "bolt.fill")
                                     .font(.caption2)
@@ -147,9 +156,9 @@ struct MenuBarContentView: View {
             }
             .padding(.bottom, 2)
         }
-        .padding(.vertical, 12)
-        .padding(.leading, 10)
-        .padding(.trailing, 16)
+        .padding(.vertical, 14)
+        .padding(.leading, 8)
+        .padding(.trailing, 20)
     }
 
     private var cardBackground: some View {
@@ -287,3 +296,224 @@ struct MenuBarContentView: View {
         return .primary
     }
 }
+
+#if DEBUG
+@MainActor
+private struct MenuBarContentPreview: View {
+    @StateObject private var battery: BatteryViewModel
+    @StateObject private var loginItem: LoginItemController
+
+    init(deviceGroups: [AccessoryDisplayGroup]) {
+        _battery = StateObject(
+            wrappedValue: BatteryViewModel(
+                previewDeviceGroups: deviceGroups
+            )
+        )
+        _loginItem = StateObject(
+            wrappedValue: LoginItemController(
+                previewIsEnabled: false
+            )
+        )
+    }
+
+    var body: some View {
+        MenuBarContentView(
+            battery: battery,
+            loginItem: loginItem
+        )
+        .background(.regularMaterial)
+        .clipShape(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+        )
+        .padding(24)
+        .background(Color.black)
+        .preferredColorScheme(.dark)
+    }
+}
+
+private enum MenuBarPreviewData {
+    static let singlePaired = [
+        AccessoryDisplayGroup(
+            id: "preview.single.receiver",
+            title: nil,
+            items: [
+                mouse(
+                    id: "preview.single.mouse",
+                    name: "Mouse",
+                    level: 93,
+                    connection: "2.4 GHz"
+                ),
+                receiver(
+                    id: "preview.single.receiver",
+                    name: "Receiver",
+                    level: 100
+                ),
+            ]
+        ),
+    ]
+
+    static let bluetoothAndReceiver = [
+        AccessoryDisplayGroup(
+            id: "preview.bluetooth.mouse",
+            title: nil,
+            items: [
+                mouse(
+                    id: "preview.bluetooth.mouse",
+                    name: "AM Infinity .97",
+                    level: 90,
+                    connection: "Bluetooth"
+                ),
+            ]
+        ),
+        AccessoryDisplayGroup(
+            id: "preview.bluetooth.receiver",
+            title: nil,
+            items: [
+                receiver(
+                    id: "preview.bluetooth.receiver",
+                    name: "AM Infinity .97 Receiver",
+                    level: 100
+                ),
+            ]
+        ),
+    ]
+
+    static let twoReceivers = [
+        AccessoryDisplayGroup(
+            id: "preview.97.receiver",
+            title: "AM Infinity .97",
+            items: [
+                mouse(
+                    id: "preview.97.mouse",
+                    name: "Mouse",
+                    level: 90,
+                    connection: "2.4 GHz"
+                ),
+                receiver(
+                    id: "preview.97.receiver",
+                    name: "Receiver",
+                    level: 100,
+                    isCharged: true
+                ),
+            ]
+        ),
+        AccessoryDisplayGroup(
+            id: "preview.8k.receiver",
+            title: "AM Infinity",
+            items: [
+                mouse(
+                    id: "preview.8k.mouse",
+                    name: "Mouse",
+                    level: 80,
+                    connection: "2.4 GHz"
+                ),
+                receiver(
+                    id: "preview.8k.receiver",
+                    name: "Receiver",
+                    level: 100
+                ),
+            ]
+        ),
+    ]
+
+    static let bluetoothAnd8K = [
+        AccessoryDisplayGroup(
+            id: "preview.mixed.bluetooth",
+            title: nil,
+            items: [
+                mouse(
+                    id: "preview.mixed.bluetooth",
+                    name: "AM Infinity .97",
+                    level: 90,
+                    connection: "Bluetooth"
+                ),
+            ]
+        ),
+        AccessoryDisplayGroup(
+            id: "preview.mixed.8k",
+            title: "AM Infinity",
+            items: [
+                mouse(
+                    id: "preview.mixed.8k.mouse",
+                    name: "Mouse",
+                    level: 80,
+                    connection: "2.4 GHz"
+                ),
+                receiver(
+                    id: "preview.mixed.8k.receiver",
+                    name: "Receiver",
+                    level: 100
+                ),
+            ]
+        ),
+    ]
+
+    static let empty: [AccessoryDisplayGroup] = []
+
+    private static func mouse(
+        id: String,
+        name: String,
+        level: Int,
+        connection: String
+    ) -> AccessoryDisplayState {
+        AccessoryDisplayState(
+            id: id,
+            kind: .mouse,
+            name: name,
+            level: level,
+            isPresent: true,
+            isCharging: false,
+            isCharged: false,
+            detail: connection
+        )
+    }
+
+    private static func receiver(
+        id: String,
+        name: String,
+        level: Int,
+        isCharged: Bool = false
+    ) -> AccessoryDisplayState {
+        AccessoryDisplayState(
+            id: id,
+            kind: .receiver,
+            name: name,
+            level: level,
+            isPresent: true,
+            isCharging: false,
+            isCharged: isCharged,
+            detail: nil
+        )
+    }
+}
+
+#Preview("Single Paired · 2.4 GHz") {
+    MenuBarContentPreview(
+        deviceGroups: MenuBarPreviewData.singlePaired
+    )
+}
+
+#Preview("Bluetooth + Receiver") {
+    MenuBarContentPreview(
+        deviceGroups: MenuBarPreviewData.bluetoothAndReceiver
+    )
+}
+
+#Preview("Two Receivers") {
+    MenuBarContentPreview(
+        deviceGroups: MenuBarPreviewData.twoReceivers
+    )
+}
+
+#Preview("Bluetooth + 8K") {
+    MenuBarContentPreview(
+        deviceGroups: MenuBarPreviewData.bluetoothAnd8K
+    )
+}
+
+#Preview("Empty State") {
+    MenuBarContentPreview(
+        deviceGroups: MenuBarPreviewData.empty
+    )
+}
+#endif

@@ -25,7 +25,10 @@ the app into a broader native macOS device Hub.
 - Standard Bluetooth Battery Service display with connection priority
   `Wired USB → Bluetooth → 2.4 GHz`
 - Automatic Mouse fallback to the 2.4 GHz receiver
-- Missing or sleeping devices are shown as `Disconnected`
+- Disconnected wired endpoints are hidden immediately
+- The last wireless Mouse reading is retained for up to five minutes across
+  brief sleep or reconnect periods
+- An empty state is shown when no device remains available
 - Bluetooth Mouse battery is not republished because macOS already supplies
   its native Bluetooth entry to the Batteries widget
 - Sources for a disconnected hardware profile are released immediately, so

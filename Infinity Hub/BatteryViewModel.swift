@@ -25,57 +25,30 @@ struct AccessoryDisplayState: Identifiable {
     let isCharging: Bool
     let isCharged: Bool
     let detail: String?
-
-    static let disconnectedMouse = AccessoryDisplayState(
-        id: "disconnected.mouse",
-        kind: .mouse,
-        name: "Mouse",
-        level: nil,
-        isPresent: false,
-        isCharging: false,
-        isCharged: false,
-        detail: "Disconnected"
-    )
-
-    static let disconnectedBase = AccessoryDisplayState(
-        id: "disconnected.receiver",
-        kind: .receiver,
-        name: "Receiver",
-        level: nil,
-        isPresent: false,
-        isCharging: false,
-        isCharged: false,
-        detail: "Disconnected"
-    )
 }
 
 struct AccessoryDisplayGroup: Identifiable {
     let id: String
     let title: String?
-    let detail: String?
     let items: [AccessoryDisplayState]
 }
 
 @MainActor
 final class BatteryViewModel: ObservableObject {
-    @Published private(set) var deviceGroups = [
-        AccessoryDisplayGroup(
-            id: "disconnected.mouse.group",
-            title: nil,
-            detail: nil,
-            items: [.disconnectedMouse]
-        ),
-        AccessoryDisplayGroup(
-            id: "disconnected.receiver.group",
-            title: nil,
-            detail: nil,
-            items: [.disconnectedBase]
-        ),
-    ]
+    private struct CachedWirelessMouse {
+        let model: AMBatteryDeviceModel
+        let connection: AMMouseConnection
+        let reading: AMBatteryReading
+        let lastSeen: Date
+    }
+
+    private static let wirelessMouseRetentionInterval: TimeInterval = 5 * 60
+
+    @Published private(set) var deviceGroups: [AccessoryDisplayGroup] = []
     @Published private(set) var message: String?
     @Published private(set) var isRefreshing = false
 
-    private let service = InfinityHubService()
+    private lazy var service = InfinityHubService()
     private let worker = DispatchQueue(
         label: "design.specos.infinityhub.poller",
         qos: .utility
@@ -83,6 +56,7 @@ final class BatteryViewModel: ObservableObject {
     private var scheduledRefresh: DispatchWorkItem?
     private var isPolling = false
     private var isStopped = false
+    private var cachedWirelessMice: [String: CachedWirelessMouse] = [:]
 
     private var accessories: [AccessoryDisplayState] {
         deviceGroups.flatMap(\.items)
@@ -135,6 +109,19 @@ final class BatteryViewModel: ObservableObject {
         refresh(showActivity: false)
     }
 
+    #if DEBUG
+    init(
+        previewDeviceGroups: [AccessoryDisplayGroup],
+        message: String? = nil,
+        isRefreshing: Bool = false
+    ) {
+        deviceGroups = previewDeviceGroups
+        self.message = message
+        self.isRefreshing = isRefreshing
+        isStopped = true
+    }
+    #endif
+
     func refresh(showActivity: Bool = true) {
         guard !isStopped, !isPolling else { return }
         scheduledRefresh?.cancel()
@@ -170,39 +157,148 @@ final class BatteryViewModel: ObservableObject {
         isRefreshing = false
         message = snapshot.message
 
-        let groups = snapshot.groups.sorted {
+        let groups = visibleGroups(
+            from: groupsRetainingWirelessMice(
+                snapshot.groups,
+                now: Date()
+            )
+        ).sorted {
             if $0.model.rawValue != $1.model.rawValue {
                 return $0.model.rawValue < $1.model.rawValue
             }
+            if $0.mouseExpected != $1.mouseExpected {
+                return $0.mouseExpected
+            }
             return $0.id < $1.id
         }
-        if groups.isEmpty {
-            deviceGroups = [
-                AccessoryDisplayGroup(
-                    id: "disconnected.mouse.group",
-                    title: nil,
-                    detail: nil,
-                    items: [.disconnectedMouse]
-                ),
-                AccessoryDisplayGroup(
-                    id: "disconnected.receiver.group",
-                    title: nil,
-                    detail: nil,
-                    items: [.disconnectedBase]
-                ),
-            ]
-        } else {
-            deviceGroups = displayGroups(for: groups)
-        }
+        deviceGroups = displayGroups(for: groups)
 
-        let missingMouseReading = groups.isEmpty || groups.contains {
-            $0.mouseExpected && $0.mouse?.exists != true
-        }
+        let missingMouseReading =
+            snapshot.groups.isEmpty || snapshot.groups.contains {
+                $0.mouseExpected && $0.mouse?.exists != true
+            }
         scheduleNext(
             after: missingMouseReading
                 ? amInfinityInitialRetryInterval
                 : amInfinityPollInterval
         )
+    }
+
+    private func groupsRetainingWirelessMice(
+        _ groups: [AMBatteryDeviceGroup],
+        now: Date
+    ) -> [AMBatteryDeviceGroup] {
+        cachedWirelessMice = cachedWirelessMice.filter {
+            now.timeIntervalSince($0.value.lastSeen)
+                <= Self.wirelessMouseRetentionInterval
+        }
+
+        let activeGroupIDs = Set(groups.map(\.id))
+        cachedWirelessMice = cachedWirelessMice.filter {
+            $0.value.connection == .bluetooth
+                || activeGroupIDs.contains($0.key)
+        }
+
+        let hasFreshNonBluetoothInfinity97Mouse = groups.contains {
+            $0.model == .infinity97
+                && $0.mouseConnection != .bluetooth
+                && $0.mouse?.exists == true
+        }
+        if hasFreshNonBluetoothInfinity97Mouse {
+            cachedWirelessMice = cachedWirelessMice.filter {
+                !($0.value.model == .infinity97
+                    && $0.value.connection == .bluetooth)
+            }
+        }
+
+        for group in groups {
+            if group.receiverExpected && !group.mouseExpected {
+                cachedWirelessMice.removeValue(forKey: group.id)
+            }
+
+            guard group.mouseExpected else { continue }
+
+            if group.mouseConnection == .wiredUSB {
+                cachedWirelessMice.removeValue(forKey: group.id)
+                continue
+            }
+
+            guard let connection = group.mouseConnection,
+                  connection == .receiver || connection == .bluetooth,
+                  let reading = group.mouse,
+                  reading.exists
+            else {
+                continue
+            }
+
+            cachedWirelessMice[group.id] = CachedWirelessMouse(
+                model: group.model,
+                connection: connection,
+                reading: reading,
+                lastSeen: now
+            )
+        }
+
+        var retainedGroups = groups.map { group in
+            guard group.mouseExpected,
+                  group.mouse?.exists != true,
+                  let cachedMouse = cachedWirelessMice[group.id]
+            else {
+                return group
+            }
+
+            return AMBatteryDeviceGroup(
+                id: group.id,
+                model: group.model,
+                mouseExpected: true,
+                receiverExpected: group.receiverExpected,
+                mouseConnection: cachedMouse.connection,
+                mouse: cachedMouse.reading,
+                receiver: group.receiver
+            )
+        }
+
+        let retainedGroupIDs = Set(retainedGroups.map(\.id))
+        for (id, cachedMouse) in cachedWirelessMice
+        where cachedMouse.connection == .bluetooth
+            && !retainedGroupIDs.contains(id)
+        {
+            retainedGroups.append(
+                AMBatteryDeviceGroup(
+                    id: id,
+                    model: cachedMouse.model,
+                    mouseExpected: true,
+                    receiverExpected: false,
+                    mouseConnection: .bluetooth,
+                    mouse: cachedMouse.reading,
+                    receiver: nil
+                )
+            )
+        }
+
+        return retainedGroups
+    }
+
+    private func visibleGroups(
+        from groups: [AMBatteryDeviceGroup]
+    ) -> [AMBatteryDeviceGroup] {
+        groups.compactMap { group in
+            let mouse = group.mouse?.exists == true ? group.mouse : nil
+            let receiver =
+                group.receiver?.exists == true ? group.receiver : nil
+
+            guard mouse != nil || receiver != nil else { return nil }
+
+            return AMBatteryDeviceGroup(
+                id: group.id,
+                model: group.model,
+                mouseExpected: mouse != nil,
+                receiverExpected: receiver != nil,
+                mouseConnection: mouse == nil ? nil : group.mouseConnection,
+                mouse: mouse,
+                receiver: receiver
+            )
+        }
     }
 
     private func displayGroups(
@@ -212,25 +308,10 @@ final class BatteryViewModel: ObservableObject {
             return standaloneDisplayGroups(for: onlyGroup)
         }
 
-        let combinedCounts = Dictionary(
-            grouping: groups.filter {
-                endpointCount(in: $0) > 1
-            },
-            by: \.model
-        ).mapValues(\.count)
-        var combinedIndices: [AMBatteryDeviceModel: Int] = [:]
         var displayGroups: [AccessoryDisplayGroup] = []
 
         for group in groups {
             let isCombined = endpointCount(in: group) > 1
-            let combinedIndex: Int?
-            if isCombined {
-                let index = (combinedIndices[group.model] ?? 0) + 1
-                combinedIndices[group.model] = index
-                combinedIndex = index
-            } else {
-                combinedIndex = nil
-            }
             var items: [AccessoryDisplayState] = []
 
             if group.mouseExpected {
@@ -263,14 +344,7 @@ final class BatteryViewModel: ObservableObject {
             displayGroups.append(
                 AccessoryDisplayGroup(
                     id: group.id,
-                    title: isCombined ? group.model.mouseName : nil,
-                    detail: isCombined
-                        ? combinedDetail(
-                            for: group,
-                            count: combinedCounts[group.model] ?? 1,
-                            index: combinedIndex ?? 1
-                        )
-                        : nil,
+                    title: isCombined ? group.model.compactMouseName : nil,
                     items: items
                 )
             )
@@ -318,7 +392,6 @@ final class BatteryViewModel: ObservableObject {
             AccessoryDisplayGroup(
                 id: group.id,
                 title: nil,
-                detail: nil,
                 items: items
             ),
         ]
@@ -327,19 +400,6 @@ final class BatteryViewModel: ObservableObject {
     private func endpointCount(in group: AMBatteryDeviceGroup) -> Int {
         (group.mouseExpected ? 1 : 0)
             + (group.receiverExpected ? 1 : 0)
-    }
-
-    private func combinedDetail(
-        for group: AMBatteryDeviceGroup,
-        count: Int,
-        index: Int
-    ) -> String {
-        let connection =
-            group.mouseConnection?.label
-            ?? AMMouseConnection.receiver.label
-        return count > 1
-            ? "\(connection) · \(index)"
-            : connection
     }
 
     private func scheduleNext(after delay: TimeInterval) {
@@ -392,17 +452,38 @@ final class LoginItemController: ObservableObject {
     @Published private(set) var requiresApproval = false
     @Published private(set) var errorMessage: String?
 
+    private let usesSystemStatus: Bool
+
     init() {
+        usesSystemStatus = true
         refreshStatus()
     }
 
+    #if DEBUG
+    init(
+        previewIsEnabled: Bool,
+        previewRequiresApproval: Bool = false,
+        previewErrorMessage: String? = nil
+    ) {
+        usesSystemStatus = false
+        isEnabled = previewIsEnabled
+        requiresApproval = previewRequiresApproval
+        errorMessage = previewErrorMessage
+    }
+    #endif
+
     func refreshStatus() {
+        guard usesSystemStatus else { return }
         let status = SMAppService.mainApp.status
         isEnabled = status == .enabled
         requiresApproval = status == .requiresApproval
     }
 
     func setEnabled(_ enabled: Bool) {
+        guard usesSystemStatus else {
+            isEnabled = enabled
+            return
+        }
         errorMessage = nil
 
         do {
