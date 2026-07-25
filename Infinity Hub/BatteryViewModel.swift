@@ -239,7 +239,7 @@ final class BatteryViewModel: ObservableObject {
                         id: "\(group.id).mouse",
                         kind: .mouse,
                         name:
-                            isCombined ? "Mouse" : group.model.mouseName,
+                            isCombined ? "Mouse" : group.model.compactMouseName,
                         reading: group.mouse,
                         connection: group.mouseConnection
                     )
@@ -254,7 +254,7 @@ final class BatteryViewModel: ObservableObject {
                         name:
                             isCombined
                                 ? "Receiver"
-                                : group.model.receiverName,
+                                : group.model.compactReceiverName,
                         reading: group.receiver
                     )
                 )
